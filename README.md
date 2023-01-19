@@ -1,11 +1,16 @@
-## My Project
+## AWS EC2 IMDSv2 Get Tool
 
-TODO: Fill this README out!
+This simple tool is useful for fetching data from imds on ec2 instances.
+It will automatically check if imdsv2 is enabled and if so will utilize it instead
+of imdsv1.
 
-Be sure to:
+To use the tool simply call the cli and as its argument the path you want to extrac tinformation for.
 
-* Change the title in this README
-* Edit your repository description on GitHub
+Usage examples:
+```
+# Get the user data script
+aws-ec2-imdsv2-get latest/user-data
+```
 
 ## Security
 
