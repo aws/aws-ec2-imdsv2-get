@@ -31,9 +31,10 @@ fn request(
         .expect("failed to read response");
 
     // The text should be delimited by \r\n
-    let segments: Vec<&str> = text.split("\r\n\r\n").collect();
-    let response_headers = segments[0];
+    let (response_headers, response_text) = text.split_once("\r\n\r\n").unwrap();
 
+    // We could just extract just the first line, but in case
+    // we need to expand this to read header values leaving it as is
     let header_lines: Vec<&str> = response_headers.split("\r\n").collect();
 
     // The first line will contain the response type
@@ -41,7 +42,6 @@ fn request(
     // The important part here is the part 2 status code
     let status_code = response_status[1];
 
-    let response_text = segments[1];
     Ok((
         status_code.parse::<u64>().unwrap(),
         response_text.to_string(),
