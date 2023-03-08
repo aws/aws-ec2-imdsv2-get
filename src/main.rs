@@ -20,7 +20,7 @@ fn request(
             .iter()
             .map(|(i, x)| format!("{}: {}", i, x))
             .collect::<Vec<_>>()
-            .join("\n")
+            .join("\r\n")
     );
     socket.write(header.as_bytes())?;
     socket.flush()?;
@@ -28,7 +28,7 @@ fn request(
     let mut text = String::new();
     socket
         .read_to_string(&mut text)
-        .expect("failed to parse response");
+        .expect("failed to read response");
 
     // The text should be delimited by \r\n
     let segments: Vec<&str> = text.split("\r\n\r\n").collect();
