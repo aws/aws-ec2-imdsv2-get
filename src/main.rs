@@ -13,14 +13,14 @@ fn request(
     let mut socket = TcpStream::connect(IMDS_URL)?;
 
     let header = format!(
-        "{} /{} HTTP/1.1\r\n{}\r\n\r\n",
+        "{} /{} HTTP/1.1\r\n{}\r\n",
         method,
         path,
         headers
             .iter()
-            .map(|(i, x)| format!("{}: {}", i, x))
+            .map(|(i, x)| format!("{}: {}\r\n", i, x))
             .collect::<Vec<_>>()
-            .join("\r\n")
+            .join("")
     );
     socket.write(header.as_bytes())?;
     socket.flush()?;
