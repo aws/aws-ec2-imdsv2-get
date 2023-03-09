@@ -95,8 +95,10 @@ fn main() -> std::io::Result<()> {
         imdsv2_handle(&mut headers)?;
     }
 
-    let (_, text) = request("GET", sub_uri.as_str(), headers)?;
-
-    println!("{}", text);
+    let (status_code, text) = request("GET", sub_uri.as_str(), headers)?;
+    if status_code == 404 {
+        std::process::exit(1);
+    }
+    print!("{}", text);
     Ok(())
 }
