@@ -9,7 +9,7 @@ fn request(
     method: &str,
     path: &str,
     headers: HashMap<String, String>,
-) -> std::io::Result<(u64, String)> {
+) -> std::io::Result<(u64, Vec<u8>)> {
     let mut socket = TcpStream::connect(IMDS_URL)?;
 
     let header = format!(
@@ -25,31 +25,43 @@ fn request(
     socket.write(header.as_bytes())?;
     socket.flush()?;
 
-    let mut text = String::new();
+    let mut buf = Vec::new();
     socket
-        .read_to_string(&mut text)
+        .read_to_end(&mut buf)
         .expect("failed to read response");
 
-    // The text should be delimited by \r\n
-    let (response_headers, response_text) = text.split_once("\r\n\r\n").unwrap();
+    // We now want to extract the headers, we get each header line by ites delim "\r\n"
+    let mut header_lines: Vec<String> = Vec::new();
+    let mut header_buf: Vec<u8> = Vec::new();
+    let mut index = 0;
 
-    // We could just extract just the first line, but in case
-    // we need to expand this to read header values leaving it as is
-    let header_lines: Vec<&str> = response_headers.split("\r\n").collect();
+    while index < buf.len() {
+        if index < buf.len() - 2 && buf[index] == b'\r' && buf[index + 1] == b'\n' {
+            if header_buf.is_empty() {
+                // We are at the end of our headers
+                index += 2;
+                break;
+            } else {
+                header_lines.push(String::from_utf8(header_buf).expect("failed to parse header"));
+                header_buf = Vec::new();
+                index += 2;
+            }
+        } else {
+            header_buf.push(buf[index]);
+            index += 1;
+        }
+    }
 
     // The first line will contain the response type
     let response_status: Vec<&str> = header_lines[0].split_whitespace().collect();
     // The important part here is the part 2 status code
     let status_code = response_status[1];
 
-    Ok((
-        status_code.parse::<u64>().unwrap(),
-        response_text.to_string(),
-    ))
+    Ok((status_code.parse::<u64>().unwrap(), buf[index..].to_vec()))
 }
 
 fn imdsv2_handle(headers: &mut HashMap<String, String>) -> std::io::Result<()> {
-    let (status, token) = request(
+    let (status, token_bytes) = request(
         "PUT",
         "latest/api/token",
         HashMap::from([(
@@ -57,6 +69,7 @@ fn imdsv2_handle(headers: &mut HashMap<String, String>) -> std::io::Result<()> {
             "1".to_string(),
         )]),
     )?;
+    let token = String::from_utf8(token_bytes).expect("failed to parse imdsv2 token");
 
     if status != 200 {
         return Err(std::io::Error::new(
@@ -95,10 +108,12 @@ fn main() -> std::io::Result<()> {
         imdsv2_handle(&mut headers)?;
     }
 
-    let (status_code, text) = request("GET", sub_uri.as_str(), headers)?;
+    let (status_code, bytes) = request("GET", sub_uri.as_str(), headers)?;
     if status_code == 404 {
         std::process::exit(1);
     }
-    print!("{}", text);
+    std::io::stdout()
+        .write_all(bytes.as_slice())
+        .expect("failed to write imdsv2 data to output");
     Ok(())
 }
