@@ -26,6 +26,7 @@ fn request(
     socket.flush()?;
 
     let mut buf = Vec::new();
+
     socket
         .read_to_end(&mut buf)
         .expect("failed to read response");
@@ -42,7 +43,8 @@ fn request(
                 index += 2;
                 break;
             } else {
-                header_lines.push(String::from_utf8(header_buf).expect("failed to parse header"));
+                let header = String::from_utf8(header_buf).expect("failed to parse header");
+                header_lines.push(header.clone());
                 header_buf = Vec::new();
                 index += 2;
             }
@@ -56,8 +58,9 @@ fn request(
     let response_status: Vec<&str> = header_lines[0].split_whitespace().collect();
     // The important part here is the part 2 status code
     let status_code = response_status[1];
+    let data = buf[index..].to_vec();
 
-    Ok((status_code.parse::<u64>().unwrap(), buf[index..].to_vec()))
+    Ok((status_code.parse::<u64>().unwrap(), data))
 }
 
 fn imdsv2_handle(headers: &mut HashMap<String, String>) -> std::io::Result<()> {
@@ -112,8 +115,12 @@ fn main() -> std::io::Result<()> {
     if status_code == 404 {
         std::process::exit(1);
     }
-    std::io::stdout()
+
+    let mut stdout = std::io::stdout();
+
+    stdout
         .write_all(bytes.as_slice())
         .expect("failed to write imdsv2 data to output");
+    stdout.flush().expect("failed to flush std output");
     Ok(())
 }
