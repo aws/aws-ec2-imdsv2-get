@@ -37,7 +37,7 @@ fn request(
     let mut index = 0;
 
     while index < buf.len() {
-        if index < buf.len() - 2 && buf[index] == b'\r' && buf[index + 1] == b'\n' {
+        if index <= buf.len() - 2 && buf[index] == b'\r' && buf[index + 1] == b'\n' {
             if header_buf.is_empty() {
                 // We are at the end of our headers
                 index += 2;
