@@ -3,14 +3,24 @@ use std::env;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 
-const IMDS_URL: &str = "169.254.169.254:80";
+const IMDS_URL_V4: &str = "169.254.169.254:80";
+const IMDS_URL_V6: &str = "[fd00:ec2::254]:80";
+
+fn get_imds_url() -> String {
+    if TcpStream::connect(IMDS_URL_V6).is_ok() {
+        IMDS_URL_V6.to_string()
+    } else {
+        IMDS_URL_V4.to_string()
+    }
+}
 
 fn request(
     method: &str,
     path: &str,
     headers: HashMap<String, String>,
 ) -> std::io::Result<(u64, Vec<u8>)> {
-    let mut socket = TcpStream::connect(IMDS_URL)?;
+    let imds_url = get_imds_url();
+    let mut socket = TcpStream::connect(imds_url)?;
 
     let header = format!(
         "{} /{} HTTP/1.1\r\n{}\r\n",
