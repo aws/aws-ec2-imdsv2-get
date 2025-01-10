@@ -109,7 +109,7 @@ fn main() -> std::io::Result<()> {
     // First let's check if imdsv2 is enabled
     let imdsv2 = match request("GET", "/", HashMap::new()) {
         Ok((status, _)) => status == 401,
-        Err(e) => e.to_string().to_lowercase().contains("Unauthorized"),
+        Err(e) => e.to_string().to_lowercase().contains("unauthorized"),
     };
 
     let mut headers: HashMap<String, String> = HashMap::new();
