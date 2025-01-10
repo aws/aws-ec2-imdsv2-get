@@ -1,16 +1,19 @@
 use std::collections::HashMap;
 use std::env;
 use std::io::{Read, Write};
-use std::net::TcpStream;
+use std::net::{SocketAddr, SocketAddrV4, TcpStream};
+use std::str::FromStr;
+use std::time::Duration;
 
 const IMDS_URL_V4: &str = "169.254.169.254:80";
 const IMDS_URL_V6: &str = "[fd00:ec2::254]:80";
 
 fn get_imds_url() -> String {
-    if TcpStream::connect(IMDS_URL_V6).is_ok() {
-        IMDS_URL_V6.to_string()
-    } else {
+    let ipv4: SocketAddr = SocketAddr::V4(SocketAddrV4::from_str(IMDS_URL_V4).unwrap());
+    if TcpStream::connect_timeout(&ipv4, Duration::from_millis(100)).is_ok() {
         IMDS_URL_V4.to_string()
+    } else {
+        IMDS_URL_V6.to_string()
     }
 }
 
@@ -32,7 +35,7 @@ fn request(
             .collect::<Vec<_>>()
             .join("")
     );
-    socket.write(header.as_bytes())?;
+    socket.write_all(header.as_bytes())?;
     socket.flush()?;
 
     let mut buf = Vec::new();
@@ -106,13 +109,7 @@ fn main() -> std::io::Result<()> {
     // First let's check if imdsv2 is enabled
     let imdsv2 = match request("GET", "/", HashMap::new()) {
         Ok((status, _)) => status == 401,
-        Err(e) => {
-            if e.to_string().to_lowercase().contains("Unauthorized") {
-                true
-            } else {
-                false
-            }
-        }
+        Err(e) => e.to_string().to_lowercase().contains("Unauthorized"),
     };
 
     let mut headers: HashMap<String, String> = HashMap::new();
